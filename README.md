@@ -81,7 +81,7 @@ Aqui estão as principais tecnologias e ferramentas usadas no projeto:
 1. Clone este repositório:
 
    ```bash
-   git clone https://github.com/augustoramos000/gestao_eventos_projeto.git
+   git clone https://github.com/paulosrng/gestao_eventos_projeto.git
    cd gestao_eventos_projeto
 
 ## Executando a aplicação:
