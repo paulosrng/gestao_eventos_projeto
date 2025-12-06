@@ -15,20 +15,31 @@
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
             <ul class="divide-y divide-gray-200">
                 {% for evento in eventos %}
-                    <li class="p-6 flex items-center justify-between hover:bg-gray-50">
-                        <div>
+                    <li class="p-6 flex flex-col md:flex-row items-center justify-between hover:bg-gray-50 gap-4">
+                        <div class="flex-1">
                             <h3 class="text-lg font-semibold text-blue-600">{{ evento.nome }}</h3>
                             <p class="text-sm text-gray-600">
                                 {{ evento.data_inicio|date:"d/m/Y" }} a {{ evento.data_fim|date:"d/m/Y" }}
                             </p>
                         </div>
-                        <div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <a href="{% url 'editar_evento' evento.id %}" class="text-gray-600 hover:text-blue-600 font-medium text-sm border border-gray-300 px-3 py-1.5 rounded transition">
+                                Editar
+                            </a>
+
+                            <a href="{% url 'excluir_evento' evento.id %}" 
+                               class="text-red-600 hover:text-red-800 font-medium text-sm border border-red-200 px-3 py-1.5 rounded hover:bg-red-50 transition"
+                               onclick="return confirm('Tem certeza que deseja excluir o evento {{ evento.nome }}? Essa ação não pode ser desfeita.')">
+                                Excluir
+                            </a>
+
                             {% if evento.finalizado %}
                                 <a href="{% url 'gerenciar_evento' evento.id %}" class="px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-md hover:bg-indigo-600">
                                     Gerir Certificados
                                 </a>
                             {% else %}
-                                <span class="px-4 py-2 bg-gray-300 text-gray-600 text-sm font-medium rounded-md cursor-not-allowed">
+                                <span class="px-4 py-2 bg-gray-200 text-gray-500 text-sm font-medium rounded-md cursor-not-allowed">
                                     Em andamento
                                 </span>
                             {% endif %}

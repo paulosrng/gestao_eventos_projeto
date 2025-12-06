@@ -55,7 +55,8 @@ class Evento(models.Model):
         on_delete=models.PROTECT,
         limit_choices_to={'perfil': 'ORGANIZADOR'}
     )
-
+    banner = models.ImageField(upload_to='banners/', blank=True, null=True, verbose_name="Banner do Evento")
+    
     def __str__(self):
         return self.nome
 
