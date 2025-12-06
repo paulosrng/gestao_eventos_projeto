@@ -74,7 +74,8 @@ Aqui estão as principais tecnologias e ferramentas usadas no projeto:
 - Python 3.x instalado  
 - (Opcional) PostgreSQL / MySQL ou outro banco de dados, se você não usar SQLite  
 - Git
-- Biblioteca ReportLab instalada (pip install ReportLab) 
+- Biblioteca ReportLab instalada (pip install ReportLab)
+- Entrar na pasta venv (venv\\Scripts\\activate)
 
 ### Setup do ambiente
 
