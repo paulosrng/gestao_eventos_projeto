@@ -9,7 +9,6 @@
     <form method="post" class="space-y-4">
         {% csrf_token %}
         
-        <!-- CORREÇÃO: Bloco para exibir erros gerais (como senhas que não correspondem) -->
         {% if form.non_field_errors %}
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
                 <strong class="font-bold">Por favor, corrija os seguintes erros:</strong>
@@ -22,43 +21,48 @@
         {% endif %}
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Campo Usuário -->
             <div>
                 <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.username.label }}</label>
-                <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" value="{{ form.username.value|default_if_none:'' }}" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 {% for error in form.username.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
             </div>
-            <!-- Campo Primeiro Nome -->
+
             <div>
                 <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.first_name.label }}</label>
-                <input type="text" name="{{ form.first_name.name }}" id="{{ form.first_name.id_for_label }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" name="{{ form.first_name.name }}" id="{{ form.first_name.id_for_label }}" value="{{ form.first_name.value|default_if_none:'' }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                  {% for error in form.first_name.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
             </div>
-            <!-- Campo Último Nome -->
+
             <div>
                 <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.last_name.label }}</label>
-                <input type="text" name="{{ form.last_name.name }}" id="{{ form.last_name.id_for_label }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" name="{{ form.last_name.name }}" id="{{ form.last_name.id_for_label }}" value="{{ form.last_name.value|default_if_none:'' }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 {% for error in form.last_name.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
             </div>
-            <!-- Campo Email -->
+
             <div>
                 <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.email.label }}</label>
-                <input type="email" name="{{ form.email.name }}" id="{{ form.email.id_for_label }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <input type="email" name="{{ form.email.name }}" id="{{ form.email.id_for_label }}" value="{{ form.email.value|default_if_none:'' }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 {% for error in form.email.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
             </div>
-            <!-- Campo Telefone -->
+
             <div>
                 <label for="{{ form.telefone.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.telefone.label }}</label>
-                <input type="text" name="{{ form.telefone.name }}" id="{{ form.telefone.id_for_label }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" 
+                       name="{{ form.telefone.name }}" 
+                       id="{{ form.telefone.id_for_label }}" 
+                       value="{{ form.telefone.value|default_if_none:'' }}" 
+                       placeholder="(XX) XXXXX-XXXX"
+                       maxlength="15"
+                       class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 {% for error in form.telefone.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
             </div>
-            <!-- Campo Instituição de Ensino -->
+
             <div>
                 <label for="{{ form.instituicao_ensino.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.instituicao_ensino.label }}</label>
-                <input type="text" name="{{ form.instituicao_ensino.name }}" id="{{ form.instituicao_ensino.id_for_label }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" name="{{ form.instituicao_ensino.name }}" id="{{ form.instituicao_ensino.id_for_label }}" value="{{ form.instituicao_ensino.value|default_if_none:'' }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 {% for error in form.instituicao_ensino.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
             </div>
-            <!-- Campo Perfil -->
+
             <div class="md:col-span-2">
                 <label for="{{ form.perfil.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.perfil.label }}</label>
                 <select name="{{ form.perfil.name }}" id="{{ form.perfil.id_for_label }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
@@ -69,7 +73,6 @@
                 {% for error in form.perfil.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
             </div>
             
-            <!-- Campos de Senha -->
             <div>
                 <label for="id_password" class="block text-sm font-medium text-gray-700">Senha</label>
                  <div class="relative">
@@ -81,6 +84,7 @@
                 </div>
                 {% for error in form.password.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
             </div>
+
             <div>
                 <label for="id_password2" class="block text-sm font-medium text-gray-700">Confirmação da senha</label>
                 <input type="password" name="password2" id="id_password2" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
@@ -101,9 +105,29 @@
         </div>
     </form>
 </div>
+
 <script>
-    // Script para mostrar/ocultar senha
     document.addEventListener('DOMContentLoaded', function() {
+        
+        const inputTelefone = document.getElementById('{{ form.telefone.id_for_label }}') || document.getElementById('id_telefone');
+
+        if (inputTelefone) {
+            inputTelefone.addEventListener('input', function (e) {
+                let valor = e.target.value;
+
+                valor = valor.replace(/\D/g, "");
+
+                if (valor.length > 11) {
+                    valor = valor.substring(0, 11);
+                }
+
+                valor = valor.replace(/^(\d{2})(\d)/g, "($1) $2");
+                valor = valor.replace(/(\d)(\d{4})$/, "$1-$2");
+
+                e.target.value = valor;
+            });
+        }
+
         const togglePassword = document.getElementById('togglePassword');
         if (togglePassword) {
             const passwordInput = document.getElementById('id_password');
