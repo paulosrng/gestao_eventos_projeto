@@ -1,0 +1,18 @@
+{% extends 'gestao_app/base.html' %}
+
+{% block title %}Sucesso{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10 p-8 bg-white rounded-lg shadow-md text-center">
+    <h2 class="text-3xl font-bold text-green-600 mb-4">Cadastro Realizado!</h2>
+    <p class="text-gray-700 text-lg">
+        Enviamos um link de confirmação para o seu e-mail (simulado no terminal).
+    </p>
+    <p class="text-gray-500 mt-4">
+        Por favor, verifique o terminal do VS Code, copie o link e cole no navegador para ativar sua conta.
+    </p>
+    <div class="mt-6">
+        <a href="{% url 'login' %}" class="text-blue-600 hover:underline">Ir para Login</a>
+    </div>
+</div>
+{% endblock %}

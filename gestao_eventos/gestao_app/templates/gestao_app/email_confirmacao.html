@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; }
+        .header { text-align: center; padding-bottom: 20px; border-bottom: 2px solid #2563EB; }
+        .logo { font-size: 24px; font-weight: bold; color: #2563EB; }
+        .content { padding: 20px 0; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #2563EB; color: #fff; text-decoration: none; border-radius: 5px; margin-top: 20px; }
+        .footer { font-size: 12px; color: #777; text-align: center; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎓 SGEA</div>
+        </div>
+        <div class="content">
+            <h2>Olá, {{ user.first_name }}!</h2>
+            <p>Obrigado por se cadastrar no SGEA.</p>
+            <p>Para ativar sua conta, clique no botão abaixo:</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ link }}" class="button">Confirmar Minha Conta</a>
+            </div>
+
+            <p style="margin-top: 30px;">Ou copie este link:</p>
+            <p><small>{{ link }}</small></p>
+        </div>
+        <div class="footer">
+            <p>Sistema de Gestão de Eventos Acadêmicos</p>
+        </div>
+    </div>
+</body>
+</html>

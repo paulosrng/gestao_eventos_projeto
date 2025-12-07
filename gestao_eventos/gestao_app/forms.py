@@ -4,8 +4,8 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from .models import Usuario, Evento
-import re # Para validação de senha
-from datetime import date # <--- ESSA LINHA QUE ESTAVA FALTANDO
+import re 
+from datetime import date 
 
 class UserCreationForm(forms.ModelForm):
     """Formulário personalizado para criação de usuários."""
@@ -64,9 +64,8 @@ class LoginForm(AuthenticationForm):
 class EventoForm(forms.ModelForm):
     class Meta:
         model = Evento
-        exclude = ['organizador_responsavel']
+        fields = '__all__'
         widgets = {
-            # Agora vai funcionar porque importamos 'date' lá em cima
             'data_inicio': forms.DateInput(attrs={
                 'type': 'date', 
                 'class': 'mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm',
@@ -75,6 +74,17 @@ class EventoForm(forms.ModelForm):
             'data_fim': forms.DateInput(attrs={'type': 'date', 'class': 'mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm'}),
             'horario': forms.TimeInput(attrs={'type': 'time', 'class': 'mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # --- ALTERAÇÃO AQUI ---
+        # Filtra APENAS usuários com perfil 'PROFESSOR'
+        self.fields['organizador_responsavel'].queryset = Usuario.objects.filter(
+            perfil='PROFESSOR'
+        )
+        # Ajustei o label para refletir a mudança
+        self.fields['organizador_responsavel'].label = "Professor Responsável"
 
     def clean_banner(self):
         imagem = self.cleaned_data.get('banner')

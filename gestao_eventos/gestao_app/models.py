@@ -38,27 +38,30 @@ class Evento(models.Model):
     local = models.CharField(max_length=150)
     quantidade_participantes = models.PositiveIntegerField()
     
-    # REGRA 2: Todo evento deve ter um responsável vinculado.
     organizador_responsavel = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        # Ampliado para permitir Professor ou Organizador
         limit_choices_to={'perfil__in': ['ORGANIZADOR', 'PROFESSOR']}
     )
     banner = models.ImageField(upload_to='banners/', blank=True, null=True, verbose_name="Banner do Evento")
     
-    # REGRA 1: Não permitir data no passado
+    # --- VALIDAÇÕES DE DATA (MÉTODO CLEAN) ---
     def clean(self):
+        # 1. Validação: A data de início não pode ser no passado
         if self.data_inicio:
             if self.data_inicio < timezone.now().date():
                 raise ValidationError({'data_inicio': 'A data de início não pode ser anterior à data atual.'})
+
+        # 2. Validação: A data de fim não pode ser antes da data de início (ADICIONADO AGORA)
+        if self.data_inicio and self.data_fim:
+            if self.data_fim < self.data_inicio:
+                raise ValidationError({'data_fim': 'A data de término não pode ser anterior à data de início.'})
     
     def save(self, *args, **kwargs):
         self.full_clean() # Força a validação do clean() ao salvar
         super().save(*args, **kwargs)
 
     def tem_vagas(self):
-        # REGRA 3: Auxiliar para verificar vagas
         qtd_inscritos = self.inscricao_set.count()
         return qtd_inscritos < self.quantidade_participantes
 
@@ -72,7 +75,6 @@ class Inscricao(models.Model):
     certificado_liberado = models.BooleanField(default=False)
 
     class Meta:
-        # REGRA 4: Garante unicidade no banco de dados também
         unique_together = ('usuario', 'evento')
 
     def __str__(self):

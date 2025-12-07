@@ -5,10 +5,13 @@ from . import api_views  # Views da API
 
 urlpatterns = [
     # --- ROTAS DO SITE (HTML) ---
+    path('cadastro/sucesso/', views.cadastro_sucesso, name='cadastro_sucesso'),
+    path('ativar/<uidb64>/<token>/', views.ativar_conta, name='ativar_conta'),
     path('', views.listar_eventos, name='listar_eventos'),
     path('cadastro/', views.cadastro_usuario, name='cadastrar_usuario'),
     path('login/', views.login_usuario, name='login'),
     path('logout/', views.logout_usuario, name='logout'),
+    path('cadastrar-participante/', views.cadastrar_participante, name='cadastrar_participante'),
     
     path('minhas-inscricoes/', views.minhas_inscricoes, name='minhas_inscricoes'),
     path('evento/<int:evento_id>/inscrever/', views.inscrever_evento, name='inscrever_evento'),

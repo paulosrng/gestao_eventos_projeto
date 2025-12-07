@@ -23,9 +23,27 @@
                 </ul>
             </div>
         {% endif %}
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Responsável Técnico (Professor/Org)</label>
+            {{ form.organizador_responsavel }}
+            <p class="text-xs text-gray-500 mt-1">Selecione quem será o responsável oficial por este evento.</p>
+            {% if form.organizador_responsavel.errors %}
+                <p class="text-red-500 text-xs italic">{{ form.organizador_responsavel.errors.0 }}</p>
+            {% endif %}
+            <script>
+                const selectResp = document.getElementById('id_organizador_responsavel');
+                if(selectResp) {
+                    selectResp.className = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500";
+                }
+            </script>
+        </div>
         <div>
             <label class="block text-sm font-medium text-gray-700">Nome do Evento</label>
             {{ form.nome }}
+            <script>
+                document.getElementById('id_nome').className = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500";
+            </script>
             {% if form.nome.errors %}
                 <p class="text-red-500 text-xs italic">{{ form.nome.errors.0 }}</p>
             {% endif %}
@@ -33,7 +51,8 @@
 
         <div>
             <label class="block text-sm font-medium text-gray-700">Tipo de Evento</label>
-            {{ form.tipo_evento }} <script>
+            {{ form.tipo_evento }}
+             <script>
                 document.getElementById('id_tipo_evento').className = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500";
              </script>
         </div>

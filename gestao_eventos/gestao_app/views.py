@@ -11,8 +11,14 @@ from reportlab.lib.units import inch
 import io
 from django.utils import timezone
 from datetime import datetime
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.conf import settings
 
-# Certifique-se que seus models e forms existem conforme importados
 from .models import Evento, Inscricao, Usuario
 from .forms import UserCreationForm, LoginForm, EventoForm
 
@@ -42,15 +48,73 @@ def cadastro_usuario(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, 'Cadastro realizado com sucesso!')
-            return redirect('listar_eventos')
+            user = form.save(commit=False)
+            user.is_active = False 
+            user.save()
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            link_ativacao = request.build_absolute_uri(f'/ativar/{uid}/{token}/')
+
+            # --- SIMULAÇÃO VISUAL DO EMAIL NO TERMINAL ---
+            print("\n" + "="*60)
+            print(" [SIMULAÇÃO DE EMAIL ENVIADO] ".center(60, "="))
+            print(" De: sistema@sgea.com.br")
+            print(f" Para: {user.email}")
+            print("-" * 60)
+            print(" Assunto: Confirmação de Cadastro - SGEA")
+            print("-" * 60)
+            print("")
+            print("  🎓 SGEA  (Sistema de Gestão de Eventos Acadêmicos)")
+            print("")
+            print(f"  Olá, {user.first_name}!")
+            print("")
+            print("  Seja bem-vindo(a) ao sistema.")
+            print("  Para ativar sua conta, clique no link abaixo:")
+            print("")
+            print(f"  {link_ativacao}")
+            print("")
+            print("="*60 + "\n")
+
+            # Envio técnico (dummy)
+            assunto = 'Confirmação de Cadastro - SGEA'
+            try:
+                html_message = render_to_string('gestao_app/email_confirmacao.html', {
+                    'user': user,
+                    'link': link_ativacao,
+                })
+                plain_message = strip_tags(html_message)
+            except:
+                html_message = None
+                plain_message = f"Link: {link_ativacao}"
+            
+            send_mail(assunto, plain_message, settings.EMAIL_HOST_USER, [user.email], html_message=html_message)
+
+            return redirect('cadastro_sucesso')
         else:
-            messages.error(request, 'Ocorreram erros no formulário. Verifique os campos.')
+            messages.error(request, 'Ocorreram erros no formulário.')
     else:
         form = UserCreationForm()
     return render(request, 'gestao_app/cadastro.html', {'form': form})
+
+def cadastro_sucesso(request):
+    return render(request, 'gestao_app/aguardando_confirmacao.html')
+
+def ativar_conta(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = Usuario.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save()
+        messages.success(request, 'Sua conta foi ativada com sucesso! Faça login.')
+        return redirect('login')
+    else:
+        messages.error(request, 'O link de ativação é inválido ou expirou.')
+        return redirect('login')
 
 def login_usuario(request):
     if request.method == 'POST':
@@ -59,11 +123,16 @@ def login_usuario(request):
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
             user = authenticate(username=username, password=password)
+            
             if user is not None:
                 login(request, user)
                 return redirect('listar_eventos')
             else:
-                messages.error(request, 'Usuário ou senha inválidos.')
+                usuario_existe = Usuario.objects.filter(username=username).first()
+                if usuario_existe and not usuario_existe.is_active:
+                    messages.error(request, 'Sua conta ainda não foi ativada. Verifique o link no terminal.')
+                else:
+                    messages.error(request, 'Usuário ou senha inválidos.')
     else:
         form = LoginForm()
     return render(request, 'gestao_app/login.html', {'form': form})
@@ -73,28 +142,29 @@ def logout_usuario(request):
     logout(request)
     return redirect('listar_eventos')
 
-# --- Views de Inscrição (Usuário) ---
+# --- Views de Inscrição (ALUNO E PROFESSOR) ---
 
 @login_required
 def inscrever_evento(request, evento_id):
+    # REGRA 9: Organizadores não devem realizar inscrições
+    if request.user.perfil == 'ORGANIZADOR':
+        messages.error(request, 'Organizadores não podem se inscrever em eventos.')
+        return redirect('listar_eventos')
+
     evento = get_object_or_404(Evento, id=evento_id)
     
-    # Validação de evento finalizado
     if is_evento_finalizado(evento):
         messages.error(request, 'Não é possível se inscrever em eventos finalizados.')
         return redirect('listar_eventos')
     
-    # REGRA 3: Verificar se há vagas
     if not evento.tem_vagas():
         messages.error(request, 'Vagas esgotadas para este evento.')
         return redirect('listar_eventos')
 
-    # REGRA 4: Verificar se já está inscrito (Duplicidade)
     if Inscricao.objects.filter(usuario=request.user, evento=evento).exists():
         messages.warning(request, 'Você já está inscrito neste evento.')
         return redirect('listar_eventos')
         
-    # Se passou por todas as regras, cria a inscrição
     Inscricao.objects.create(usuario=request.user, evento=evento)
     messages.success(request, f'Inscrição no evento "{evento.nome}" realizada com sucesso!')
     return redirect('listar_eventos')
@@ -102,7 +172,6 @@ def inscrever_evento(request, evento_id):
 @login_required
 def cancelar_inscricao(request, evento_id):
     evento = get_object_or_404(Evento, id=evento_id)
-    # Tenta pegar a inscrição, se não existir dá 404
     inscricao = get_object_or_404(Inscricao, usuario=request.user, evento=evento)
     
     if is_evento_finalizado(evento):
@@ -115,33 +184,31 @@ def cancelar_inscricao(request, evento_id):
 
 @login_required
 def minhas_inscricoes(request):
+    # Área de Aluno e Professor
     inscricoes = Inscricao.objects.filter(usuario=request.user).select_related('evento')
     for inscricao in inscricoes:
         inscricao.evento_finalizado = is_evento_finalizado(inscricao.evento)
-    contexto = { 'inscricoes': inscricoes }
-    return render(request, 'gestao_app/minhas_inscricoes.html', contexto)
+    return render(request, 'gestao_app/minhas_inscricoes.html', {'inscricoes': inscricoes})
 
-# --- Views do Organizador (Gestão de Eventos) ---
+# --- Views do ORGANIZADOR (Gestão de Eventos) ---
 
 @login_required
 def criar_evento(request):
-    # Verifica permissão básica (idealmente usar decorators ou mixins)
-    if getattr(request.user, 'perfil', '') not in ['ORGANIZADOR', 'PROFESSOR']:
-        messages.error(request, 'Você não tem permissão para criar eventos.')
+    # REGRA 9: Apenas Organizador pode cadastrar eventos
+    if request.user.perfil != 'ORGANIZADOR':
+        messages.error(request, 'Acesso negado. Apenas organizadores podem criar eventos.')
         return redirect('listar_eventos')
 
     if request.method == 'POST':
         form = EventoForm(request.POST, request.FILES) 
         if form.is_valid():
-            evento = form.save(commit=False)
-            evento.organizador_responsavel = request.user
+            # Não fazemos mais commit=False para setar usuário, o form já traz o responsável
             try:
-                evento.save() # Aqui o clean() do model será chamado (Regra 1)
+                form.save()
                 messages.success(request, 'Evento criado com sucesso!')
                 return redirect('meus_eventos')
-            except ValidationError as e:
-                form.add_error(None, e) # Adiciona erro de validação do model ao form
-        
+            except Exception as e:
+                form.add_error(None, str(e))
     else:
         form = EventoForm()
     return render(request, 'gestao_app/criar_evento.html', {'form': form})
@@ -150,7 +217,8 @@ def criar_evento(request):
 def editar_evento(request, evento_id):
     evento = get_object_or_404(Evento, id=evento_id)
     
-    if evento.organizador_responsavel != request.user:
+    # REGRA 9: Organizador gerencia todos os eventos
+    if request.user.perfil != 'ORGANIZADOR':
         messages.error(request, 'Você não tem permissão para editar este evento.')
         return redirect('listar_eventos')
         
@@ -158,11 +226,11 @@ def editar_evento(request, evento_id):
         form = EventoForm(request.POST, request.FILES, instance=evento)
         if form.is_valid():
             try:
-                form.save() # Também chama validação do model
+                form.save()
                 messages.success(request, 'Evento atualizado com sucesso!')
                 return redirect('meus_eventos')
-            except ValidationError as e:
-                form.add_error(None, e)
+            except Exception as e:
+                form.add_error(None, str(e))
     else:
         form = EventoForm(instance=evento)
     
@@ -172,25 +240,27 @@ def editar_evento(request, evento_id):
 def excluir_evento(request, evento_id):
     evento = get_object_or_404(Evento, id=evento_id)
     
-    if evento.organizador_responsavel != request.user:
+    # REGRA 9: Apenas Organizador exclui
+    if request.user.perfil != 'ORGANIZADOR':
         messages.error(request, 'Você não tem permissão para excluir este evento.')
     else:
         try:
             evento.delete()
             messages.success(request, 'Evento excluído com sucesso.')
         except Exception as e:
-            messages.error(request, 'Não foi possível excluir o evento. Ele pode ter inscrições vinculadas.')
+            messages.error(request, 'Não foi possível excluir. Existem inscrições vinculadas.')
         
     return redirect('meus_eventos')
 
 @login_required
 def meus_eventos(request):
-    # Permite Organizador e Professor
-    if getattr(request.user, 'perfil', '') not in ['ORGANIZADOR', 'PROFESSOR']:
-        messages.error(request, 'Apenas organizadores podem acessar esta página.')
+    # REGRA 9: Painel exclusivo de Organizador para ver TODOS os eventos
+    if request.user.perfil != 'ORGANIZADOR':
+        messages.error(request, 'Apenas organizadores podem acessar o painel de gestão.')
         return redirect('listar_eventos')
     
-    eventos = Evento.objects.filter(organizador_responsavel=request.user).order_by('-data_inicio')
+    # Mostra todos os eventos para o Organizador gerenciar
+    eventos = Evento.objects.all().order_by('-data_inicio')
     for evento in eventos:
         evento.finalizado = is_evento_finalizado(evento)
     
@@ -198,10 +268,14 @@ def meus_eventos(request):
 
 @login_required
 def gerenciar_evento(request, evento_id):
-    evento = get_object_or_404(Evento, id=evento_id, organizador_responsavel=request.user)
+    # REGRA 9: Organizador cadastra/gere participantes (auditoria)
+    evento = get_object_or_404(Evento, id=evento_id)
     
+    if request.user.perfil != 'ORGANIZADOR':
+        return redirect('listar_eventos')
+
     if not is_evento_finalizado(evento):
-        messages.warning(request, 'Você só pode gerir certificados de eventos que já ocorreram.')
+        messages.warning(request, 'Você só pode gerir presenças de eventos que já ocorreram.')
 
     if request.method == 'POST':
         Inscricao.objects.filter(evento=evento).update(certificado_liberado=False)
@@ -210,67 +284,104 @@ def gerenciar_evento(request, evento_id):
         if inscricoes_a_liberar_ids:
             Inscricao.objects.filter(id__in=inscricoes_a_liberar_ids, evento=evento).update(certificado_liberado=True)
         
-        messages.success(request, 'Status dos certificados atualizado com sucesso!')
+        messages.success(request, 'Lista de presença atualizada!')
         return redirect('gerenciar_evento', evento_id=evento.id)
 
     inscricoes = Inscricao.objects.filter(evento=evento).select_related('usuario')
     return render(request, 'gestao_app/gerenciar_evento.html', {'evento': evento, 'inscricoes': inscricoes})
 
-# --- Views de Certificado ---
+@login_required
+def cadastrar_participante(request):
+    # REGRA 9: Organizador cadastra novos participantes no sistema manualmente
+    if request.user.perfil != 'ORGANIZADOR':
+        messages.error(request, 'Acesso negado.')
+        return redirect('listar_eventos')
+
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_active = True # Organizador criando já ativa direto
+            user.save()
+            messages.success(request, f'Participante {user.username} cadastrado com sucesso!')
+            return redirect('meus_eventos')
+    else:
+        form = UserCreationForm()
+    
+    return render(request, 'gestao_app/cadastro_interno.html', {'form': form})
+
+# --- Views de Certificado (Aluno/Professor) ---
 
 @login_required
 def detalhe_certificado(request, inscricao_id):
     inscricao = get_object_or_404(Inscricao, id=inscricao_id, usuario=request.user)
+    
     if not inscricao.certificado_liberado:
-        messages.error(request, 'O certificado para este evento ainda não foi liberado.')
+        messages.error(request, 'Sua presença não foi confirmada neste evento.')
         return redirect('minhas_inscricoes')
+        
+    if not is_evento_finalizado(inscricao.evento):
+        messages.warning(request, 'O certificado só estará disponível após o término do evento.')
+        return redirect('minhas_inscricoes')
+
     return render(request, 'gestao_app/detalhe_certificado.html', {'inscricao': inscricao})
 
 @login_required
 def gerar_pdf_certificado(request, inscricao_id):
     inscricao = get_object_or_404(Inscricao, id=inscricao_id, usuario=request.user)
     
-    if not inscricao.certificado_liberado:
-        messages.error(request, 'O certificado não está disponível para download.')
+    if not inscricao.certificado_liberado or not is_evento_finalizado(inscricao.evento):
+        messages.error(request, 'Certificado indisponível no momento.')
         return redirect('minhas_inscricoes')
     
     buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
+    from reportlab.lib.pagesizes import landscape
+    p = canvas.Canvas(buffer, pagesize=landscape(letter))
+    width, height = landscape(letter)
     
-    p.setTitle(f"Certificado - {inscricao.evento.nome}")
-    p.setFont("Helvetica-Bold", 24)
-    p.drawCentredString(width / 2.0, height - 2 * inch, "Certificado de Participação")
+    # --- Design do Certificado ---
+    p.setStrokeColorRGB(0.2, 0.4, 0.8)
+    p.setLineWidth(5)
+    p.rect(30, 30, width-60, height-60)
     
-    texto = p.beginText(1.5 * inch, height - 3.5 * inch)
-    texto.setFont("Helvetica", 12)
-    texto.textLine("Certificamos que")
-    texto.moveCursor(0, 0.5 * inch)
+    p.setFont("Helvetica-Bold", 36)
+    p.drawCentredString(width / 2.0, height - 120, "CERTIFICADO DE PARTICIPAÇÃO")
     
-    texto.setFont("Helvetica-Bold", 14)
+    p.setFont("Helvetica", 16)
+    p.drawCentredString(width / 2.0, height - 180, "Certificamos que")
+    
+    p.setFont("Helvetica-Bold", 28)
     nome_usuario = inscricao.usuario.get_full_name() or inscricao.usuario.username
-    texto.textLine(f"{nome_usuario}")
+    p.drawCentredString(width / 2.0, height - 230, nome_usuario.upper())
     
-    texto.moveCursor(0, 0.5 * inch)
-    texto.setFont("Helvetica", 12)
-    texto.textLine(f"participou no evento \"{inscricao.evento.nome}\",")
+    p.setFont("Helvetica", 16)
+    p.drawCentredString(width / 2.0, height - 280, f"Participou com êxito do evento:")
     
-    data_formatada = inscricao.evento.data_inicio.strftime('%d/%m/%Y')
-    texto.textLine(f"realizado em {data_formatada},")
+    p.setFont("Helvetica-Bold", 20)
+    p.drawCentredString(width / 2.0, height - 310, f"\"{inscricao.evento.nome}\"")
     
-    organizador_nome = inscricao.evento.organizador_responsavel.get_full_name() or "Organização"
-    texto.textLine(f"organizado por {organizador_nome}.")
+    p.setFont("Helvetica", 14)
+    data_fmt = inscricao.evento.data_inicio.strftime('%d/%m/%Y')
+    p.drawCentredString(width / 2.0, height - 350, f"Realizado em {data_fmt}")
     
-    p.drawText(texto)
+    p.setLineWidth(1)
+    p.setStrokeColorRGB(0, 0, 0)
+    p.line(width/2 - 150, 100, width/2 + 150, 100)
     
-    p.line(3 * inch, 2.5 * inch, 5.5 * inch, 2.5 * inch)
-    p.drawCentredString(4.25 * inch, 2.25 * inch, "Assinatura do Organizador")
+    p.setFont("Helvetica-Oblique", 12)
+    organizador = inscricao.evento.organizador_responsavel.get_full_name() or "Coordenação SGEA"
+    p.drawCentredString(width / 2.0, 80, f"{organizador}")
+    p.drawCentredString(width / 2.0, 65, "Responsável Técnico / Organizador")
     
+    p.setFont("Helvetica", 9)
+    p.setFillColorRGB(0.5, 0.5, 0.5)
+    p.drawString(40, 40, f"Autenticação: REF-{inscricao.id}-{inscricao.evento.id}")
+
     p.showPage()
     p.save()
     
     buffer.seek(0)
     response = HttpResponse(buffer, content_type='application/pdf')
-    filename = f"certificado_{inscricao.evento.id}_{inscricao.usuario.id}.pdf"
+    filename = f"certificado_{inscricao.id}.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response

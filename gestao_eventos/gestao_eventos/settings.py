@@ -155,3 +155,5 @@ REST_FRAMEWORK = {
     ),
     }
 }
+EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
+EMAIL_HOST_USER = 'sistema@sgea.com.br'
