@@ -28,6 +28,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework.authtoken',
     # Minha App
     'gestao_app',
 ]
@@ -130,3 +132,19 @@ LOGOUT_REDIRECT_URL = '/' # Redireciona para a home ('/') após o logout
 LOGIN_URL = 'login'       # Nome da URL para a qual usuários não logados são enviados
 
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated', # Exige login para tudo
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'consulta_eventos': '20/day',  # Regra 3.1 do PDF
+        'inscricao_participante': '50/day', # Regra 3.2 do PDF
+    }
+}

@@ -1,5 +1,9 @@
 from django.urls import path
 from . import views
+from django.urls import path
+from rest_framework.authtoken.views import obtain_auth_token # Importação para o Token
+from . import views      # Suas views normais do site
+from . import api_views  # As novas views da API
 
 urlpatterns = [
     path('', views.listar_eventos, name='listar_eventos'),
@@ -22,4 +26,13 @@ urlpatterns = [
 
     path('certificado/<int:inscricao_id>/', views.detalhe_certificado, name='detalhe_certificado'),
     path('certificado/<int:inscricao_id>/gerar-pdf/', views.gerar_pdf_certificado, name='gerar_pdf_certificado'),
+
+    # --- NOVAS ROTAS DA API (Adicionadas) ---
+    # Endpoint para pegar o Token (Login da API)
+    path('api/token/', obtain_auth_token, name='api_token_auth'),
+    
+    # Endpoints da API (Consultar e Inscrever)
+    path('api/eventos/', api_views.listar_eventos_api, name='api_listar_eventos'),
+    path('api/inscrever/', api_views.inscrever_evento_api, name='api_inscrever'),
+
 ]
