@@ -5,7 +5,6 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Inclui todas as URLs do ficheiro gestao_app/urls.py
     path('', include('gestao_app.urls')), 
 ]
 
