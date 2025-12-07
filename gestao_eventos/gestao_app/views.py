@@ -19,16 +19,26 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 
-from .models import Evento, Inscricao, Usuario
+from .models import Evento, Inscricao, Usuario, AuditLog
 from .forms import UserCreationForm, LoginForm, EventoForm
 
 # --- Funções Auxiliares ---
 
 def is_evento_finalizado(evento):
-    """Verifica se a data de fim do evento já passou."""
     if not evento.data_fim:
         return False
     return evento.data_fim < timezone.now().date()
+
+def registrar_log(usuario, acao, detalhes=""):
+    """Salva uma ação na tabela de auditoria."""
+    try:
+        AuditLog.objects.create(
+            usuario=usuario if usuario.is_authenticated else None,
+            acao=acao,
+            detalhes=detalhes
+        )
+    except Exception as e:
+        print(f"Erro ao salvar log: {e}")
 
 # --- Views Públicas e de Autenticação ---
 
@@ -52,11 +62,13 @@ def cadastro_usuario(request):
             user.is_active = False 
             user.save()
 
+            # LOG
+            registrar_log(user, 'CRIACAO_USUARIO', f"Novo cadastro: {user.username}")
+
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
             link_ativacao = request.build_absolute_uri(f'/ativar/{uid}/{token}/')
 
-            # --- SIMULAÇÃO VISUAL DO EMAIL NO TERMINAL ---
             print("\n" + "="*60)
             print(" [SIMULAÇÃO DE EMAIL ENVIADO] ".center(60, "="))
             print(" De: sistema@sgea.com.br")
@@ -76,7 +88,6 @@ def cadastro_usuario(request):
             print("")
             print("="*60 + "\n")
 
-            # Envio técnico (dummy)
             assunto = 'Confirmação de Cadastro - SGEA'
             try:
                 html_message = render_to_string('gestao_app/email_confirmacao.html', {
@@ -126,6 +137,8 @@ def login_usuario(request):
             
             if user is not None:
                 login(request, user)
+                # LOG
+                registrar_log(user, 'LOGIN', "Usuário realizou login")
                 return redirect('listar_eventos')
             else:
                 usuario_existe = Usuario.objects.filter(username=username).first()
@@ -146,7 +159,6 @@ def logout_usuario(request):
 
 @login_required
 def inscrever_evento(request, evento_id):
-    # REGRA 9: Organizadores não devem realizar inscrições
     if request.user.perfil == 'ORGANIZADOR':
         messages.error(request, 'Organizadores não podem se inscrever em eventos.')
         return redirect('listar_eventos')
@@ -166,6 +178,10 @@ def inscrever_evento(request, evento_id):
         return redirect('listar_eventos')
         
     Inscricao.objects.create(usuario=request.user, evento=evento)
+    
+    # LOG
+    registrar_log(request.user, 'INSCRICAO', f"Inscreveu-se no evento: {evento.nome}")
+    
     messages.success(request, f'Inscrição no evento "{evento.nome}" realizada com sucesso!')
     return redirect('listar_eventos')
 
@@ -177,6 +193,8 @@ def cancelar_inscricao(request, evento_id):
     if is_evento_finalizado(evento):
         messages.error(request, 'Não é possível cancelar inscrição de eventos já finalizados.')
     else:
+        # LOG
+        registrar_log(request.user, 'CANCELAMENTO', f"Cancelou inscrição no evento: {evento.nome}")
         inscricao.delete()
         messages.success(request, f'Inscrição no evento "{evento.nome}" cancelada.')
         
@@ -184,7 +202,6 @@ def cancelar_inscricao(request, evento_id):
 
 @login_required
 def minhas_inscricoes(request):
-    # Área de Aluno e Professor
     inscricoes = Inscricao.objects.filter(usuario=request.user).select_related('evento')
     for inscricao in inscricoes:
         inscricao.evento_finalizado = is_evento_finalizado(inscricao.evento)
@@ -194,7 +211,6 @@ def minhas_inscricoes(request):
 
 @login_required
 def criar_evento(request):
-    # REGRA 9: Apenas Organizador pode cadastrar eventos
     if request.user.perfil != 'ORGANIZADOR':
         messages.error(request, 'Acesso negado. Apenas organizadores podem criar eventos.')
         return redirect('listar_eventos')
@@ -202,9 +218,10 @@ def criar_evento(request):
     if request.method == 'POST':
         form = EventoForm(request.POST, request.FILES) 
         if form.is_valid():
-            # Não fazemos mais commit=False para setar usuário, o form já traz o responsável
             try:
-                form.save()
+                evento = form.save()
+                # LOG
+                registrar_log(request.user, 'EVENTO_CRIAR', f"Criou o evento: {evento.nome}")
                 messages.success(request, 'Evento criado com sucesso!')
                 return redirect('meus_eventos')
             except Exception as e:
@@ -217,7 +234,6 @@ def criar_evento(request):
 def editar_evento(request, evento_id):
     evento = get_object_or_404(Evento, id=evento_id)
     
-    # REGRA 9: Organizador gerencia todos os eventos
     if request.user.perfil != 'ORGANIZADOR':
         messages.error(request, 'Você não tem permissão para editar este evento.')
         return redirect('listar_eventos')
@@ -227,6 +243,8 @@ def editar_evento(request, evento_id):
         if form.is_valid():
             try:
                 form.save()
+                # LOG
+                registrar_log(request.user, 'EVENTO_EDITAR', f"Editou o evento: {evento.nome}")
                 messages.success(request, 'Evento atualizado com sucesso!')
                 return redirect('meus_eventos')
             except Exception as e:
@@ -240,12 +258,14 @@ def editar_evento(request, evento_id):
 def excluir_evento(request, evento_id):
     evento = get_object_or_404(Evento, id=evento_id)
     
-    # REGRA 9: Apenas Organizador exclui
     if request.user.perfil != 'ORGANIZADOR':
         messages.error(request, 'Você não tem permissão para excluir este evento.')
     else:
+        nome_evento = evento.nome
         try:
             evento.delete()
+            # LOG
+            registrar_log(request.user, 'EVENTO_EXCLUIR', f"Excluiu o evento: {nome_evento}")
             messages.success(request, 'Evento excluído com sucesso.')
         except Exception as e:
             messages.error(request, 'Não foi possível excluir. Existem inscrições vinculadas.')
@@ -254,12 +274,10 @@ def excluir_evento(request, evento_id):
 
 @login_required
 def meus_eventos(request):
-    # REGRA 9: Painel exclusivo de Organizador para ver TODOS os eventos
     if request.user.perfil != 'ORGANIZADOR':
         messages.error(request, 'Apenas organizadores podem acessar o painel de gestão.')
         return redirect('listar_eventos')
     
-    # Mostra todos os eventos para o Organizador gerenciar
     eventos = Evento.objects.all().order_by('-data_inicio')
     for evento in eventos:
         evento.finalizado = is_evento_finalizado(evento)
@@ -268,7 +286,6 @@ def meus_eventos(request):
 
 @login_required
 def gerenciar_evento(request, evento_id):
-    # REGRA 9: Organizador cadastra/gere participantes (auditoria)
     evento = get_object_or_404(Evento, id=evento_id)
     
     if request.user.perfil != 'ORGANIZADOR':
@@ -292,7 +309,6 @@ def gerenciar_evento(request, evento_id):
 
 @login_required
 def cadastrar_participante(request):
-    # REGRA 9: Organizador cadastra novos participantes no sistema manualmente
     if request.user.perfil != 'ORGANIZADOR':
         messages.error(request, 'Acesso negado.')
         return redirect('listar_eventos')
@@ -301,8 +317,12 @@ def cadastrar_participante(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.is_active = True # Organizador criando já ativa direto
+            user.is_active = True 
             user.save()
+            
+            # LOG
+            registrar_log(request.user, 'CRIACAO_USUARIO', f"Cadastrou manualmente: {user.username}")
+            
             messages.success(request, f'Participante {user.username} cadastrado com sucesso!')
             return redirect('meus_eventos')
     else:
@@ -310,7 +330,7 @@ def cadastrar_participante(request):
     
     return render(request, 'gestao_app/cadastro_interno.html', {'form': form})
 
-# --- Views de Certificado (Aluno/Professor) ---
+# --- Views de Certificado ---
 
 @login_required
 def detalhe_certificado(request, inscricao_id):
@@ -324,6 +344,9 @@ def detalhe_certificado(request, inscricao_id):
         messages.warning(request, 'O certificado só estará disponível após o término do evento.')
         return redirect('minhas_inscricoes')
 
+    # LOG
+    registrar_log(request.user, 'CERTIFICADO_GERAR', f"Visualizou certificado: {inscricao.evento.nome}")
+
     return render(request, 'gestao_app/detalhe_certificado.html', {'inscricao': inscricao})
 
 @login_required
@@ -334,12 +357,14 @@ def gerar_pdf_certificado(request, inscricao_id):
         messages.error(request, 'Certificado indisponível no momento.')
         return redirect('minhas_inscricoes')
     
+    # LOG
+    registrar_log(request.user, 'CERTIFICADO_GERAR', f"Baixou PDF: {inscricao.evento.nome}")
+
     buffer = io.BytesIO()
     from reportlab.lib.pagesizes import landscape
     p = canvas.Canvas(buffer, pagesize=landscape(letter))
     width, height = landscape(letter)
     
-    # --- Design do Certificado ---
     p.setStrokeColorRGB(0.2, 0.4, 0.8)
     p.setLineWidth(5)
     p.rect(30, 30, width-60, height-60)
@@ -385,3 +410,28 @@ def gerar_pdf_certificado(request, inscricao_id):
     filename = f"certificado_{inscricao.id}.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+# --- RELATÓRIO DE AUDITORIA (NOVO) ---
+@login_required
+def relatorio_auditoria(request):
+    if request.user.perfil != 'ORGANIZADOR':
+        messages.error(request, 'Acesso negado.')
+        return redirect('listar_eventos')
+    
+    logs = AuditLog.objects.all().order_by('-data_hora')
+    
+    # Filtros
+    data_filtro = request.GET.get('data')
+    usuario_filtro = request.GET.get('usuario')
+    
+    if data_filtro:
+        logs = logs.filter(data_hora__date=data_filtro)
+    
+    if usuario_filtro:
+        logs = logs.filter(usuario__username__icontains=usuario_filtro)
+
+    return render(request, 'gestao_app/relatorio_auditoria.html', {
+        'logs': logs,
+        'data_filtro': data_filtro,
+        'usuario_filtro': usuario_filtro
+    })

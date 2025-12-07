@@ -45,25 +45,20 @@ class Evento(models.Model):
     )
     banner = models.ImageField(upload_to='banners/', blank=True, null=True, verbose_name="Banner do Evento")
     
-    # --- VALIDAÇÕES DE DATA (MÉTODO CLEAN) ---
     def clean(self):
-        # 1. Validação: A data de início não pode ser no passado
         if self.data_inicio:
             if self.data_inicio < timezone.now().date():
                 raise ValidationError({'data_inicio': 'A data de início não pode ser anterior à data atual.'})
-
-        # 2. Validação: A data de fim não pode ser antes da data de início (ADICIONADO AGORA)
         if self.data_inicio and self.data_fim:
             if self.data_fim < self.data_inicio:
                 raise ValidationError({'data_fim': 'A data de término não pode ser anterior à data de início.'})
     
     def save(self, *args, **kwargs):
-        self.full_clean() # Força a validação do clean() ao salvar
+        self.full_clean()
         super().save(*args, **kwargs)
 
     def tem_vagas(self):
-        qtd_inscritos = self.inscricao_set.count()
-        return qtd_inscritos < self.quantidade_participantes
+        return self.inscricao_set.count() < self.quantidade_participantes
 
     def __str__(self):
         return self.nome
@@ -87,3 +82,24 @@ class Certificado(models.Model):
 
     def __str__(self):
         return f'Certificado para {self.inscricao.usuario} no evento {self.inscricao.evento}'
+
+# --- NOVO: TABELA DE AUDITORIA ---
+class AuditLog(models.Model):
+    ACAO_CHOICES = (
+        ('CRIACAO_USUARIO', 'Criação de Usuário'),
+        ('LOGIN', 'Login no Sistema'),
+        ('EVENTO_CRIAR', 'Cadastro de Evento'),
+        ('EVENTO_EDITAR', 'Alteração de Evento'),
+        ('EVENTO_EXCLUIR', 'Exclusão de Evento'),
+        ('INSCRICAO', 'Inscrição em Evento'),
+        ('CANCELAMENTO', 'Cancelamento de Inscrição'),
+        ('CERTIFICADO_GERAR', 'Geração de Certificado'),
+        ('API_CONSULTA', 'Consulta via API'),
+    )
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    acao = models.CharField(max_length=50, choices=ACAO_CHOICES)
+    detalhes = models.TextField(blank=True, null=True)
+    data_hora = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.data_hora}] {self.usuario} - {self.acao}"
