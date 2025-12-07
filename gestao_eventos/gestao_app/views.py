@@ -1,3 +1,5 @@
+# gestao_app/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -45,7 +47,7 @@ def cadastro_usuario(request):
             messages.success(request, 'Cadastro realizado com sucesso!')
             return redirect('listar_eventos')
         else:
-            messages.error(request, 'Ocorreram erros no formulário. Por favor, corrija-os.')
+            messages.error(request, 'Ocorreram erros no formulário. Verifique os campos.')
     else:
         form = UserCreationForm()
     return render(request, 'gestao_app/cadastro.html', {'form': form})
@@ -76,18 +78,31 @@ def logout_usuario(request):
 @login_required
 def inscrever_evento(request, evento_id):
     evento = get_object_or_404(Evento, id=evento_id)
+    
+    # Validação de evento finalizado
     if is_evento_finalizado(evento):
         messages.error(request, 'Não é possível se inscrever em eventos finalizados.')
         return redirect('listar_eventos')
+    
+    # REGRA 3: Verificar se há vagas
+    if not evento.tem_vagas():
+        messages.error(request, 'Vagas esgotadas para este evento.')
+        return redirect('listar_eventos')
+
+    # REGRA 4: Verificar se já está inscrito (Duplicidade)
+    if Inscricao.objects.filter(usuario=request.user, evento=evento).exists():
+        messages.warning(request, 'Você já está inscrito neste evento.')
+        return redirect('listar_eventos')
         
-    Inscricao.objects.get_or_create(usuario=request.user, evento=evento)
+    # Se passou por todas as regras, cria a inscrição
+    Inscricao.objects.create(usuario=request.user, evento=evento)
     messages.success(request, f'Inscrição no evento "{evento.nome}" realizada com sucesso!')
     return redirect('listar_eventos')
 
 @login_required
 def cancelar_inscricao(request, evento_id):
-    """View adicionada: permite ao usuário sair do evento."""
     evento = get_object_or_404(Evento, id=evento_id)
+    # Tenta pegar a inscrição, se não existir dá 404
     inscricao = get_object_or_404(Inscricao, usuario=request.user, evento=evento)
     
     if is_evento_finalizado(evento):
@@ -110,16 +125,23 @@ def minhas_inscricoes(request):
 
 @login_required
 def criar_evento(request):
-    # ... verificações de permissão ...
+    # Verifica permissão básica (idealmente usar decorators ou mixins)
+    if getattr(request.user, 'perfil', '') not in ['ORGANIZADOR', 'PROFESSOR']:
+        messages.error(request, 'Você não tem permissão para criar eventos.')
+        return redirect('listar_eventos')
+
     if request.method == 'POST':
-        # ADICIONADO: request.FILES
         form = EventoForm(request.POST, request.FILES) 
         if form.is_valid():
             evento = form.save(commit=False)
             evento.organizador_responsavel = request.user
-            evento.save()
-            messages.success(request, 'Evento criado com sucesso!')
-            return redirect('meus_eventos')
+            try:
+                evento.save() # Aqui o clean() do model será chamado (Regra 1)
+                messages.success(request, 'Evento criado com sucesso!')
+                return redirect('meus_eventos')
+            except ValidationError as e:
+                form.add_error(None, e) # Adiciona erro de validação do model ao form
+        
     else:
         form = EventoForm()
     return render(request, 'gestao_app/criar_evento.html', {'form': form})
@@ -135,9 +157,12 @@ def editar_evento(request, evento_id):
     if request.method == 'POST':
         form = EventoForm(request.POST, request.FILES, instance=evento)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Evento atualizado com sucesso!')
-            return redirect('meus_eventos')
+            try:
+                form.save() # Também chama validação do model
+                messages.success(request, 'Evento atualizado com sucesso!')
+                return redirect('meus_eventos')
+            except ValidationError as e:
+                form.add_error(None, e)
     else:
         form = EventoForm(instance=evento)
     
@@ -145,20 +170,23 @@ def editar_evento(request, evento_id):
 
 @login_required
 def excluir_evento(request, evento_id):
-    """View adicionada: permite excluir eventos."""
     evento = get_object_or_404(Evento, id=evento_id)
     
     if evento.organizador_responsavel != request.user:
         messages.error(request, 'Você não tem permissão para excluir este evento.')
     else:
-        evento.delete()
-        messages.success(request, 'Evento excluído com sucesso.')
+        try:
+            evento.delete()
+            messages.success(request, 'Evento excluído com sucesso.')
+        except Exception as e:
+            messages.error(request, 'Não foi possível excluir o evento. Ele pode ter inscrições vinculadas.')
         
     return redirect('meus_eventos')
 
 @login_required
 def meus_eventos(request):
-    if getattr(request.user, 'perfil', '') != 'ORGANIZADOR':
+    # Permite Organizador e Professor
+    if getattr(request.user, 'perfil', '') not in ['ORGANIZADOR', 'PROFESSOR']:
         messages.error(request, 'Apenas organizadores podem acessar esta página.')
         return redirect('listar_eventos')
     
@@ -170,21 +198,15 @@ def meus_eventos(request):
 
 @login_required
 def gerenciar_evento(request, evento_id):
-    """Gerencia a emissão de certificados."""
     evento = get_object_or_404(Evento, id=evento_id, organizador_responsavel=request.user)
     
     if not is_evento_finalizado(evento):
         messages.warning(request, 'Você só pode gerir certificados de eventos que já ocorreram.')
-       
 
     if request.method == 'POST':
-       
         Inscricao.objects.filter(evento=evento).update(certificado_liberado=False)
-        
-        # 2. Pegamos os IDs marcados no formulário
         inscricoes_a_liberar_ids = request.POST.getlist('inscricao_id')
         
-        # 3. Atualizamos apenas os marcados para True
         if inscricoes_a_liberar_ids:
             Inscricao.objects.filter(id__in=inscricoes_a_liberar_ids, evento=evento).update(certificado_liberado=True)
         
@@ -216,7 +238,6 @@ def gerar_pdf_certificado(request, inscricao_id):
     p = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     
-    # Design do PDF
     p.setTitle(f"Certificado - {inscricao.evento.nome}")
     p.setFont("Helvetica-Bold", 24)
     p.drawCentredString(width / 2.0, height - 2 * inch, "Certificado de Participação")
@@ -227,7 +248,6 @@ def gerar_pdf_certificado(request, inscricao_id):
     texto.moveCursor(0, 0.5 * inch)
     
     texto.setFont("Helvetica-Bold", 14)
-    # Usa get_full_name se existir, senão usa o username
     nome_usuario = inscricao.usuario.get_full_name() or inscricao.usuario.username
     texto.textLine(f"{nome_usuario}")
     
@@ -243,7 +263,6 @@ def gerar_pdf_certificado(request, inscricao_id):
     
     p.drawText(texto)
     
-    # Linha de assinatura
     p.line(3 * inch, 2.5 * inch, 5.5 * inch, 2.5 * inch)
     p.drawCentredString(4.25 * inch, 2.25 * inch, "Assinatura do Organizador")
     

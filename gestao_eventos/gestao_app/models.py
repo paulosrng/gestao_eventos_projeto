@@ -3,6 +3,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 import uuid
 
 class Usuario(AbstractUser):
@@ -36,16 +38,27 @@ class Evento(models.Model):
     local = models.CharField(max_length=150)
     quantidade_participantes = models.PositiveIntegerField()
     
+    # REGRA 2: Todo evento deve ter um responsável vinculado.
     organizador_responsavel = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        limit_choices_to={'perfil': 'ORGANIZADOR'}
+        # Ampliado para permitir Professor ou Organizador
+        limit_choices_to={'perfil__in': ['ORGANIZADOR', 'PROFESSOR']}
     )
     banner = models.ImageField(upload_to='banners/', blank=True, null=True, verbose_name="Banner do Evento")
     
-    # --- NOVO MÉTODO ADICIONADO ---
+    # REGRA 1: Não permitir data no passado
+    def clean(self):
+        if self.data_inicio:
+            if self.data_inicio < timezone.now().date():
+                raise ValidationError({'data_inicio': 'A data de início não pode ser anterior à data atual.'})
+    
+    def save(self, *args, **kwargs):
+        self.full_clean() # Força a validação do clean() ao salvar
+        super().save(*args, **kwargs)
+
     def tem_vagas(self):
-        # 'inscricao_set' é o nome padrão que o Django dá para a relação reversa
+        # REGRA 3: Auxiliar para verificar vagas
         qtd_inscritos = self.inscricao_set.count()
         return qtd_inscritos < self.quantidade_participantes
 
@@ -59,6 +72,7 @@ class Inscricao(models.Model):
     certificado_liberado = models.BooleanField(default=False)
 
     class Meta:
+        # REGRA 4: Garante unicidade no banco de dados também
         unique_together = ('usuario', 'evento')
 
     def __str__(self):

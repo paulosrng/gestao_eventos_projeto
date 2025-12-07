@@ -1,6 +1,25 @@
-/* Este ficheiro pode ser usado para adicionar CSS customizado no futuro. */
-/* Por enquanto, estamos a usar o Tailwind CSS diretamente pelo link no base.html, */
-/* então este ficheiro pode permanecer vazio ou ser usado para overrides. */
+/* gestao_app/static/gestao_app/css/styles.css */
+
+/* Ajuste para garantir que o rodapé não suba em telas grandes */
 body {
-    /* Exemplo de um estilo que poderia ser adicionado aqui */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Personalização extra para as mensagens de alerta do Django */
+.alert-success {
+    border-left: 4px solid #10B981; /* Verde */
+}
+
+.alert-error {
+    border-left: 4px solid #EF4444; /* Vermelho */
+}
+
+.alert-info {
+    border-left: 4px solid #3B82F6; /* Azul */
 }

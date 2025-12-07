@@ -1,92 +1,98 @@
 {% extends 'gestao_app/base.html' %}
 
-{% block title %}Criar Novo Evento - SGEA{% endblock %}
+{% block title %}
+    {% if titulo %}{{ titulo }}{% else %}Criar Novo Evento{% endif %} - SGEA
+{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto mt-10 p-8 bg-white rounded-lg shadow-md">
-    <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">{{ titulo|default:"Criar Novo Evento" }}</h2>
+    <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
+        {% if titulo %}{{ titulo }}{% else %}Criar Novo Evento{% endif %}
+    </h2>
 
     <form method="post" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
 
         {% if form.non_field_errors %}
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
-                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                <strong class="font-bold">Atenção:</strong>
+                <ul class="list-disc list-inside">
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
             </div>
         {% endif %}
-
         <div>
-            <label for="{{ form.nome.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.nome.label }}</label>
-            <input type="text" name="{{ form.nome.name }}" id="{{ form.nome.id_for_label }}" value="{{ form.nome.value|default_if_none:'' }}" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-            {% for error in form.nome.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
-        </div>
-
-        <div>
-            <label for="{{ form.banner.id_for_label }}" class="block text-sm font-medium text-gray-700">Banner do Evento</label>
-            
-            {% if form.banner.value %}
-                <div class="mb-2 p-2 border border-gray-200 rounded bg-gray-50">
-                    <p class="text-xs text-gray-500 mb-1">Imagem atual:</p>
-                    {% if form.banner.value.url %}
-                        <img src="{{ form.banner.value.url }}" alt="Banner Atual" class="h-32 w-auto object-cover rounded mb-2">
-                        <a href="{{ form.banner.value.url }}" target="_blank" class="text-blue-600 text-sm hover:underline">Ver tamanho original</a>
-                    {% else %}
-                        <span class="text-sm text-gray-800">{{ form.banner.value }}</span>
-                    {% endif %}
-                </div>
+            <label class="block text-sm font-medium text-gray-700">Nome do Evento</label>
+            {{ form.nome }}
+            {% if form.nome.errors %}
+                <p class="text-red-500 text-xs italic">{{ form.nome.errors.0 }}</p>
             {% endif %}
-
-            <input type="file" name="{{ form.banner.name }}" id="{{ form.banner.id_for_label }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-            {% for error in form.banner.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
         </div>
 
         <div>
-            <label for="{{ form.tipo_evento.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.tipo_evento.label }}</label>
-            <select name="{{ form.tipo_evento.name }}" id="{{ form.tipo_evento.id_for_label }}" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                {% for value, text in form.tipo_evento.field.choices %}
-                    <option value="{{ value }}" {% if form.tipo_evento.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
-                {% endfor %}
-            </select>
+            <label class="block text-sm font-medium text-gray-700">Tipo de Evento</label>
+            {{ form.tipo_evento }} <script>
+                document.getElementById('id_tipo_evento').className = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500";
+             </script>
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <label for="{{ form.data_inicio.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.data_inicio.label }}</label>
-                <input type="date" name="{{ form.data_inicio.name }}" id="{{ form.data_inicio.id_for_label }}" value="{{ form.data_inicio.value|date:'Y-m-d'|default_if_none:'' }}" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <label class="block text-sm font-medium text-gray-700">Data de Início</label>
+                {{ form.data_inicio }}
+                {% if form.data_inicio.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.data_inicio.errors.0 }}</p>
+                {% endif %}
             </div>
+
             <div>
-                <label for="{{ form.data_fim.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.data_fim.label }}</label>
-                <input type="date" name="{{ form.data_fim.name }}" id="{{ form.data_fim.id_for_label }}" value="{{ form.data_fim.value|date:'Y-m-d'|default_if_none:'' }}" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <label class="block text-sm font-medium text-gray-700">Data de Término</label>
+                {{ form.data_fim }}
+                {% if form.data_fim.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.data_fim.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Horário</label>
+                {{ form.horario }}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Vagas Disponíveis</label>
+                {{ form.quantidade_participantes }}
+                 <script>
+                    document.getElementById('id_quantidade_participantes').className = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm";
+                 </script>
             </div>
         </div>
 
         <div>
-            <label for="{{ form.horario.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.horario.label }}</label>
-            <input type="time" name="{{ form.horario.name }}" id="{{ form.horario.id_for_label }}" value="{{ form.horario.value|time:'H:i'|default_if_none:'' }}" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <label class="block text-sm font-medium text-gray-700">Local</label>
+            {{ form.local }}
+            <script>
+                document.getElementById('id_local').className = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm";
+            </script>
         </div>
 
         <div>
-            <label for="{{ form.local.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.local.label }}</label>
-            <input type="text" name="{{ form.local.name }}" id="{{ form.local.id_for_label }}" value="{{ form.local.value|default_if_none:'' }}" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-        </div>
-
-        <div>
-            <label for="{{ form.quantidade_participantes.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.quantidade_participantes.label }}</label>
-            <input type="number" name="{{ form.quantidade_participantes.name }}" id="{{ form.quantidade_participantes.id_for_label }}" value="{{ form.quantidade_participantes.value|default_if_none:'' }}" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-        </div>
-
-        <div class="flex items-center justify-between gap-4 mt-8 pt-4 border-t border-gray-100">
-            <button type="submit" class="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                Salvar Evento
-            </button>
-
-            {% if form.instance.pk %}
-                <a href="{% url 'excluir_evento' form.instance.pk %}" 
-                   class="py-2 px-4 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                   onclick="return confirm('ATENÇÃO: Tem certeza que deseja excluir este evento? Todas as inscrições também serão apagadas.')">
-                    Excluir
-                </a>
+            <label class="block text-sm font-medium text-gray-700">Banner do Evento (Opcional)</label>
+            {{ form.banner }}
+            <p class="text-xs text-gray-500 mt-1">Formatos aceitos: JPG, PNG. Máx: 5MB.</p>
+            {% if form.banner.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.banner.errors.0 }}</p>
             {% endif %}
+        </div>
+
+        <div class="flex justify-end pt-4">
+            <a href="{% url 'meus_eventos' %}" class="bg-gray-500 text-white px-4 py-2 rounded-md mr-2 hover:bg-gray-600">Cancelar</a>
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
+                {% if titulo %}Salvar Alterações{% else %}Criar Evento{% endif %}
+            </button>
         </div>
     </form>
 </div>

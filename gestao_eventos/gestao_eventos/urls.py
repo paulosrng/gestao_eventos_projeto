@@ -8,5 +8,6 @@ urlpatterns = [
     path('', include('gestao_app.urls')), 
 ]
 
+# Configuração de Mídia (Imagens)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

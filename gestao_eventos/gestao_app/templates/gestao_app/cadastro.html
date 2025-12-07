@@ -53,7 +53,7 @@
                        value="{{ form.telefone.value|default_if_none:'' }}" 
                        placeholder="(XX) XXXXX-XXXX"
                        maxlength="15"
-                       class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                       class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 phone-mask">
                 {% for error in form.telefone.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
             </div>
 
@@ -94,7 +94,7 @@
         
         {% if form.password2.help_text %}
         <div class="text-xs text-gray-500 space-y-1 mt-2">
-            {{ form.password2.help_text|safe }}
+            {{ form.password.help_text|safe }}
         </div>
         {% endif %}
 
@@ -109,25 +109,33 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         
-        const inputTelefone = document.getElementById('{{ form.telefone.id_for_label }}') || document.getElementById('id_telefone');
+        // --- 1. MÁSCARA DE TELEFONE (Direta no HTML para garantir que funcione) ---
+        // Pega todos os campos que tenham a classe .phone-mask
+        const phoneInputs = document.querySelectorAll('.phone-mask');
 
-        if (inputTelefone) {
-            inputTelefone.addEventListener('input', function (e) {
-                let valor = e.target.value;
+        phoneInputs.forEach(input => {
+            input.addEventListener('input', function (e) {
+                let v = e.target.value.replace(/\D/g, ""); // Remove tudo que não for dígito
+                
+                // Limita a 11 dígitos
+                if (v.length > 11) v = v.slice(0, 11);
 
-                valor = valor.replace(/\D/g, "");
-
-                if (valor.length > 11) {
-                    valor = valor.substring(0, 11);
+                // Aplica a formatação (XX) XXXXX-XXXX
+                if (v.length > 10) {
+                    v = v.replace(/^(\d\d)(\d{5})(\d{4}).*/, "($1) $2-$3");
+                } else if (v.length > 5) {
+                    v = v.replace(/^(\d\d)(\d{4})(\d{0,4}).*/, "($1) $2-$3");
+                } else if (v.length > 2) {
+                    v = v.replace(/^(\d\d)(\d{0,5}).*/, "($1) $2");
+                } else {
+                    v = v.replace(/^(\d*)/, "($1");
                 }
 
-                valor = valor.replace(/^(\d{2})(\d)/g, "($1) $2");
-                valor = valor.replace(/(\d)(\d{4})$/, "$1-$2");
-
-                e.target.value = valor;
+                e.target.value = v;
             });
-        }
+        });
 
+        // --- 2. Lógica de Alternar Visibilidade da Senha (Toggle Password) ---
         const togglePassword = document.getElementById('togglePassword');
         if (togglePassword) {
             const passwordInput = document.getElementById('id_password');
@@ -135,8 +143,11 @@
             const eyeSlashIcon = document.getElementById('eye-slash-icon');
 
             togglePassword.addEventListener('click', function () {
+                // Troca o tipo do input
                 const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
                 passwordInput.setAttribute('type', type);
+                
+                // Troca os ícones
                 eyeIcon.classList.toggle('hidden');
                 eyeSlashIcon.classList.toggle('hidden');
             });
