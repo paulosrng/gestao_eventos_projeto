@@ -23,7 +23,7 @@ Na **Fase 2**, o sistema recebeu melhorias significativas como automação de pr
 - [Instalação e Configuração](#%EF%B8%8F-instalação-e-configuração)
 - [Guia de Testes (Dados Iniciais)](#-guia-de-testes-dados-iniciais)
 - [Documentação da API](#-documentação-da-api)
-- [Licença](#-licença)
+
 
 ---
 
