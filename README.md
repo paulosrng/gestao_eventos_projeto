@@ -23,7 +23,7 @@ Na **Fase 2**, o sistema recebeu melhorias significativas como automação de pr
 - [Instalação e Configuração](#%EF%B8%8F-instalação-e-configuração)
 - [Guia de Testes (Dados Iniciais)](#-guia-de-testes-dados-iniciais)
 - [Documentação da API](#-documentação-da-api)
-
+- [Bibliotecas Utilizadas](#-bibliotecas-utilizadas)
 
 ---
 
@@ -98,7 +98,11 @@ O SGEA permite o ciclo completo de gestão de eventos, incluindo:
 | **Ícones** | FontAwesome 6 |
 
 ---
-
+## 📖 Bibliotecas Utilizadas
+- RepotLab
+- djangorestframework 
+- djangorestframework_simplejwt
+  
 ## ⚙️ Instalação e Configuração
 
 ### 1. Clonar o Repositório
