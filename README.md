@@ -20,10 +20,11 @@ Na **Fase 2**, o sistema recebeu melhorias significativas como automação de pr
 - [Funcionalidades (Fase 2)](#-funcionalidades-fase-2)
 - [Perfis de Acesso](#-perfis-de-acesso)
 - [Tecnologias Utilizadas](#-tecnologias-utilizadas)
+- [Bibliotecas Utilizadas](#-bibliotecas-utilizadas)
 - [Instalação e Configuração](#%EF%B8%8F-instalação-e-configuração)
 - [Guia de Testes (Dados Iniciais)](#-guia-de-testes-dados-iniciais)
 - [Documentação da API](#-documentação-da-api)
-- [Bibliotecas Utilizadas](#-bibliotecas-utilizadas)
+
 
 ---
 
