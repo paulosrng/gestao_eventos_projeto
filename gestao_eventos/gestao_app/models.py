@@ -49,9 +49,8 @@ class Evento(models.Model):
         if self.data_inicio:
             if self.data_inicio < timezone.now().date():
                 raise ValidationError({'data_inicio': 'A data de início não pode ser anterior à data atual.'})
-        if self.data_inicio and self.data_fim:
-            if self.data_fim < self.data_inicio:
-                raise ValidationError({'data_fim': 'A data de término não pode ser anterior à data de início.'})
+        # Regra alterada: agora permitimos que `data_fim` seja anterior a `data_inicio`.
+        # Se for necessário aplicar validações específicas no futuro, adicionar aqui.
     
     def save(self, *args, **kwargs):
         self.full_clean()
