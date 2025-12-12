@@ -100,9 +100,9 @@ O SGEA permite o ciclo completo de gestão de eventos, incluindo:
 
 ---
 ## 📖 Bibliotecas Utilizadas
-- RepotLab
-- djangorestframework 
-- djangorestframework_simplejwt
+- pip install ReportLab
+- pip install djangorestframework 
+- pip install djangorestframework-simplejwt
   
 ## ⚙️ Instalação e Configuração
 
